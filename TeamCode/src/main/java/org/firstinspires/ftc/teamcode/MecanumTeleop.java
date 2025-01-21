@@ -1,12 +1,17 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.annotation.SuppressLint;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
+import org.firstinspires.ftc.helpers.Debounce;
+
 @TeleOp(name="RacerBot MecanumDrive Standard", group="Linear OpMode")
 public class MecanumTeleop extends LinearOpMode {
+    @SuppressLint("DefaultLocale")
     @Override
     public void runOpMode() throws InterruptedException {
 
@@ -18,7 +23,25 @@ public class MecanumTeleop extends LinearOpMode {
         frontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
+        frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         double limiter = 1;
+        double y;
+        double x;
+        double rx;
+        double modulator;
+        boolean lowPowerMode = false;
+        double minSpeed = .5;
+        double maxSpeed = 1;
+        double frontLeftPower;
+        double frontRightPower;
+        double backLeftPower;
+        double backRightPower;
+
+        Debounce debounceSqaure = new Debounce();
 
         waitForStart();
 
@@ -26,30 +49,28 @@ public class MecanumTeleop extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            if (gamepad1.left_trigger > 0 && limiter < 3.5) {
-                limiter += .00005;
-            }
-            else if (gamepad1.right_trigger > 0 && limiter > 1) {
-                limiter -= .00005;
+            if (debounceSqaure.isPressed(gamepad1.square)) {
+                lowPowerMode = !lowPowerMode;
             }
 
-            double y = -gamepad1.left_stick_y;
-            double rx = gamepad1.left_stick_x * 1.1;
-            double x = -gamepad1.right_stick_x;
+            modulator = lowPowerMode ? minSpeed : maxSpeed;
 
-            double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-            double frontLeftPower = (y + x + rx) / denominator;
-            double backLeftPower = (y - x + rx) / denominator;
-            double frontRightPower = (y - x - rx) / denominator;
-            double backRightPower = (y + x - rx) / denominator;
+            y = -gamepad1.left_stick_y;
+            x = gamepad1.left_stick_x * 1.1;
+            rx = gamepad1.right_stick_x;
 
-            frontLeftMotor.setPower(frontLeftPower/limiter);
-            backLeftMotor.setPower(backLeftPower/limiter);
-            frontRightMotor.setPower(frontRightPower/limiter);
-            backRightMotor.setPower(backRightPower/limiter);
+            frontLeftPower = ((y + x + rx)*modulator);
+            frontRightPower = ((y - x - rx)*modulator);
+            backLeftPower = ((y - x + rx)*modulator);
+            backRightPower = ((y + x - rx)*modulator);
 
-            telemetry.addData("Status","Online");
-            telemetry.addData("Limiting value ",String.format("%.2g%n", limiter));
+            frontLeftMotor.setPower(frontLeftPower);
+            backLeftMotor.setPower(backLeftPower);
+            frontRightMotor.setPower(frontRightPower);
+            backRightMotor.setPower(backRightPower);
+
+            telemetry.addLine("Status: " + "Online");
+            telemetry.addLine("Low Power Mode: " + lowPowerMode);
             telemetry.update();
         }
     }
